@@ -56,9 +56,13 @@ public:
     void getStateInformation (MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
     
+    void updateFilter();
+    
     AudioProcessorValueTreeState tree;
-
+    
 private:
+    dsp::ProcessorDuplicator <dsp::IIR::Filter<float>, dsp::IIR::Coefficients <float>> lowPassFilter;
+    
     float lastSampleRate;
     
     //==============================================================================

@@ -22,20 +22,14 @@ IirPluginAudioProcessor::IirPluginAudioProcessor()
                       #endif
                        .withOutput ("Output", AudioChannelSet::stereo(), true)
                      #endif
-                       ), tree(*this, nullptr)
+                       ), tree(*this, nullptr), lowPassFilter(dsp::IIR::Coefficients<float>::makeLowPass(44100, 20000.0f, 0.1))
 #endif
 {
     NormalisableRange<float> cutoffRange (20.0f, 20000.0f);
-    NormalisableRange<float> resRange (1.0f, 5.0f);
-    NormalisableRange<float> filterMenuRange (0, 2);
+    NormalisableRange<float> resRange (0.1f, 1.0f);
     
-    tree.createAndAddParameter("cutoff", "Cutoff", "cutoff", cutoffRange, 600.0f, nullptr, nullptr);
-    tree.createAndAddParameter("resonance", "Resonance", "resonance", resRange, 1.0f, nullptr, nullptr);
-    
-    tree.createAndAddParameter("filterMenu", "FilterMenu", "filterMenu", filterMenuRange, 0, nullptr, nullptr);
-    
-    
-    
+    tree.createAndAddParameter("cutoff", "Cutoff", "cutoff", cutoffRange, 100.0f, nullptr, nullptr);
+    tree.createAndAddParameter("resonance", "Resonance", "resonance", resRange, 0.1f, nullptr, nullptr);
 }
 
 IirPluginAudioProcessor::~IirPluginAudioProcessor()
@@ -108,6 +102,15 @@ void IirPluginAudioProcessor::changeProgramName (int index, const String& newNam
 void IirPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     lastSampleRate = sampleRate;
+    
+    dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = samplesPerBlock;
+    spec.numChannels = getTotalNumOutputChannels();
+    
+ 
+    lowPassFilter.prepare(spec);
+    lowPassFilter.reset();
 }
 
 void IirPluginAudioProcessor::releaseResources()
@@ -140,34 +143,29 @@ bool IirPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts
 }
 #endif
 
+void IirPluginAudioProcessor::updateFilter()
+{
+    float freq = *tree.getRawParameterValue("cutoff");
+    float res = *tree.getRawParameterValue("resonance");
+    
+    *lowPassFilter.state = *dsp::IIR::Coefficients<float>::makeLowPass(lastSampleRate, freq, res);
+}
+
 void IirPluginAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages)
 {
     ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
-
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
-    }
+    
+    dsp::AudioBlock <float> block (buffer);
+    updateFilter();
+    lowPassFilter.process(dsp::ProcessContextReplacing<float> (block));
 }
+
+
 
 //==============================================================================
 bool IirPluginAudioProcessor::hasEditor() const

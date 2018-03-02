@@ -28,21 +28,20 @@ IirPluginAudioProcessorEditor::IirPluginAudioProcessorEditor (IirPluginAudioProc
     addAndMakeVisible(&filterCutoffDial);
     
     filterResDial.setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
-    filterResDial.setRange(1.0f, 5.0f);
+    filterResDial.setRange(0.1f, 1.0f);
     filterResDial.setValue(2.0f);
     filterResDial.setTextBoxStyle(Slider::NoTextBox, false, 0, 0);
     filterResDial.setPopupDisplayEnabled(true, true, this);
     addAndMakeVisible(&filterResDial);
     
     filterCutoffValue = new AudioProcessorValueTreeState::SliderAttachment (processor.tree, "cutoff", filterCutoffDial);
-    
     filterResValue = new AudioProcessorValueTreeState::SliderAttachment (processor.tree, "resonance", filterResDial);
-    
     filterCutoffDial.setSkewFactorFromMidPoint(1000.0f);
 }
 
 IirPluginAudioProcessorEditor::~IirPluginAudioProcessorEditor()
 {
+    
 }
 
 //==============================================================================

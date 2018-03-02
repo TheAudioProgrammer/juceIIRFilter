@@ -27,13 +27,11 @@ public:
     void paint (Graphics&) override;
     void resized() override;
     
-    ScopedPointer<AudioProcessorValueTreeState::SliderAttachment> filterCutoffValue;
-    ScopedPointer<AudioProcessorValueTreeState::SliderAttachment> filterResValue;
-    
-    
 private:
     Slider filterCutoffDial;
     Slider filterResDial;
+    ScopedPointer<AudioProcessorValueTreeState::SliderAttachment> filterCutoffValue;
+    ScopedPointer<AudioProcessorValueTreeState::SliderAttachment> filterResValue;
     
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
